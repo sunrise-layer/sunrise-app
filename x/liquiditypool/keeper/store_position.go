@@ -14,7 +14,7 @@ import (
 
 // GetPositionCount get the total number of position
 func (k Keeper) GetPositionCount(ctx context.Context) uint64 {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, []byte{})
 	byteKey := types.KeyPrefix(types.PositionCountKey)
 	bz := store.Get(byteKey)
@@ -30,7 +30,7 @@ func (k Keeper) GetPositionCount(ctx context.Context) uint64 {
 
 // SetPositionCount set the total number of position
 func (k Keeper) SetPositionCount(ctx context.Context, count uint64) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, []byte{})
 	byteKey := types.KeyPrefix(types.PositionCountKey)
 	bz := make([]byte, 8)
@@ -55,7 +55,7 @@ func (k Keeper) AppendPosition(ctx context.Context, position types.Position) uin
 
 // SetPosition set a specific position in the store
 func (k Keeper) SetPosition(ctx context.Context, position types.Position) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PositionKey))
 	b := k.cdc.MustMarshal(&position)
 	store.Set(GetPositionIDBytes(position.Id), b)
@@ -70,7 +70,7 @@ func (k Keeper) SetPosition(ctx context.Context, position types.Position) {
 
 // GetPosition returns a position from its id
 func (k Keeper) GetPosition(ctx context.Context, id uint64) (val types.Position, found bool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PositionKey))
 	b := store.Get(GetPositionIDBytes(id))
 	if b == nil {
@@ -90,14 +90,14 @@ func (k Keeper) RemovePosition(ctx context.Context, id uint64) {
 	k.RemovePositionsByPool(ctx, position.PoolId)
 	k.RemovePositionsByAddress(ctx, position.Address)
 
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PositionKey))
 	store.Delete(GetPositionIDBytes(id))
 }
 
 // GetAllPositions returns all position
 func (k Keeper) GetAllPositions(ctx context.Context) (list []types.Position) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PositionKey))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
@@ -121,7 +121,7 @@ func GetPositionIDBytes(id uint64) []byte {
 }
 
 func (k Keeper) PoolHasPosition(ctx context.Context, poolId uint64) bool {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.PositionByPoolPrefix(poolId))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
@@ -134,7 +134,7 @@ func (k Keeper) PoolHasPosition(ctx context.Context, poolId uint64) bool {
 }
 
 func (k Keeper) GetPositionsByPool(ctx context.Context, poolId uint64) []types.Position {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.PositionByPoolPrefix(poolId))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
@@ -152,7 +152,7 @@ func (k Keeper) GetPositionsByPool(ctx context.Context, poolId uint64) []types.P
 }
 
 func (k Keeper) GetPositionsByAddress(ctx context.Context, addr string) []types.Position {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.PositionByAddressPrefix(addr))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
@@ -171,7 +171,7 @@ func (k Keeper) GetPositionsByAddress(ctx context.Context, addr string) []types.
 
 // RemovePositionsByPool removes all positions associated with the given pool ID
 func (k Keeper) RemovePositionsByPool(ctx context.Context, poolId uint64) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.PositionByPoolPrefix(poolId))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
@@ -184,7 +184,7 @@ func (k Keeper) RemovePositionsByPool(ctx context.Context, poolId uint64) {
 
 // RemovePositionsByAddress removes all positions associated with the given address
 func (k Keeper) RemovePositionsByAddress(ctx context.Context, address string) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.PositionByAddressPrefix(address))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 

@@ -14,13 +14,14 @@ import (
 
 	"cosmossdk.io/core/appmodule"
 	"cosmossdk.io/log"
+	"cosmossdk.io/math"
+	stakingkeeper "cosmossdk.io/x/staking/keeper"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	blocksdkabci "github.com/skip-mev/block-sdk/v2/abci"
+	// blocksdkabci "github.com/skip-mev/block-sdk/v2/abci"
 	"github.com/spf13/cast"
 
 	"github.com/sunriselayer/sunrise/x/da/keeper"
@@ -134,7 +135,7 @@ func (h *VoteExtHandler) ValidatorsInfo(ctx sdk.Context, consAddr []byte) (int64
 }
 
 func (h *VoteExtHandler) ExtendVoteHandler(daConfig DAConfig, dec sdk.TxDecoder, handler sdk.AnteHandler, daKeeper damodulekeeper.Keeper) sdk.ExtendVoteHandler {
-	return func(ctx sdk.Context, req *abci.RequestExtendVote) (*abci.ResponseExtendVote, error) {
+	return func(ctx sdk.Context, req *abci.ExtendVoteRequest) (*abci.ExtendVoteResponse, error) {
 		voteExt := types.VoteExtension{
 			Data: []*types.PublishedData{},
 			// Shares: []*types.DataShares{},
@@ -152,7 +153,10 @@ func (h *VoteExtHandler) ExtendVoteHandler(daConfig DAConfig, dec sdk.TxDecoder,
 				continue
 			}
 
-			params := daKeeper.GetParams(ctx)
+			params, err := daKeeper.Params.Get(ctx)
+			if err != nil {
+				continue
+			}
 			numValidators, valAddr, err := h.ValidatorsInfo(ctx, req.ProposerAddress)
 			if err != nil {
 				continue
@@ -162,7 +166,11 @@ func (h *VoteExtHandler) ExtendVoteHandler(daConfig DAConfig, dec sdk.TxDecoder,
 			for _, msg := range msgs {
 				switch msg := msg.(type) {
 				case *types.MsgPublishData:
-					threshold := params.ReplicationFactor.QuoInt64(numValidators).MulInt64(int64(len(msg.ShardDoubleHashes))).RoundInt64()
+					replicationFactor, err := math.LegacyNewDecFromStr(params.ReplicationFactor) // TODO: remove with math.Dec
+					if err != nil {
+						continue
+					}
+					threshold := replicationFactor.QuoInt64(numValidators).MulInt64(int64(len(msg.ShardDoubleHashes))).RoundInt64()
 					if threshold > int64(len(msg.ShardDoubleHashes)) {
 						threshold = int64(len(msg.ShardDoubleHashes))
 					}
@@ -196,16 +204,16 @@ func (h *VoteExtHandler) ExtendVoteHandler(daConfig DAConfig, dec sdk.TxDecoder,
 			return nil, fmt.Errorf("failed to marshal vote extension: %w", err)
 		}
 
-		return &abci.ResponseExtendVote{VoteExtension: bz}, nil
+		return &abci.ExtendVoteResponse{VoteExtension: bz}, nil
 	}
 }
 
 func (h *VoteExtHandler) VerifyVoteExtensionHandler(daConfig DAConfig, daKeeper damodulekeeper.Keeper) sdk.VerifyVoteExtensionHandler {
-	return func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
+	return func(ctx sdk.Context, req *abci.VerifyVoteExtensionRequest) (*abci.VerifyVoteExtensionResponse, error) {
 		var voteExt types.VoteExtension
 
 		if len(req.VoteExtension) == 0 {
-			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
+			return &abci.VerifyVoteExtensionResponse{Status: abci.VERIFY_VOTE_EXTENSION_STATUS_ACCEPT}, nil
 		}
 
 		err := voteExt.Unmarshal(req.VoteExtension)
@@ -231,7 +239,7 @@ func (h *VoteExtHandler) VerifyVoteExtensionHandler(daConfig DAConfig, daKeeper 
 		// 	}
 		// }
 
-		return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
+		return &abci.VerifyVoteExtensionResponse{Status: abci.VERIFY_VOTE_EXTENSION_STATUS_ACCEPT}, nil
 	}
 }
 
@@ -245,11 +253,19 @@ type ProposalHandler struct {
 	logger                 log.Logger
 	keeper                 keeper.Keeper
 	stakingKeeper          *stakingkeeper.Keeper
-	DefaultProposalHandler *blocksdkabci.ProposalHandler
 	ModuleManager          *module.Manager
+	DefaultProposalHandler *baseapp.DefaultProposalHandler
+	// DefaultProposalHandler *blocksdkabci.ProposalHandler
 }
 
-func NewProposalHandler(logger log.Logger, keeper keeper.Keeper, stakingKeeper *stakingkeeper.Keeper, ModuleManager *module.Manager, proposalHandler *blocksdkabci.ProposalHandler) *ProposalHandler {
+func NewProposalHandler(
+	logger log.Logger,
+	keeper keeper.Keeper,
+	stakingKeeper *stakingkeeper.Keeper,
+	ModuleManager *module.Manager,
+	proposalHandler *baseapp.DefaultProposalHandler,
+	// proposalHandler *blocksdkabci.ProposalHandler,
+) *ProposalHandler {
 	return &ProposalHandler{
 		logger:                 logger,
 		keeper:                 keeper,
@@ -260,7 +276,7 @@ func NewProposalHandler(logger log.Logger, keeper keeper.Keeper, stakingKeeper *
 }
 
 func (h *ProposalHandler) PrepareProposal() sdk.PrepareProposalHandler {
-	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+	return func(ctx sdk.Context, req *abci.PrepareProposalRequest) (*abci.PrepareProposalResponse, error) {
 		defaultHandler := h.DefaultProposalHandler.PrepareProposalHandler()
 		defaultResponse, err := defaultHandler(ctx, req)
 		if err != nil {
@@ -272,10 +288,10 @@ func (h *ProposalHandler) PrepareProposal() sdk.PrepareProposalHandler {
 		cp := ctx.ConsensusParams()
 		voteExtEnabled := cp.Abci != nil && req.Height > cp.Abci.VoteExtensionsEnableHeight && cp.Abci.VoteExtensionsEnableHeight != 0
 		if !voteExtEnabled {
-			return &abci.ResponsePrepareProposal{Txs: proposalTxs}, nil
+			return &abci.PrepareProposalResponse{Txs: proposalTxs}, nil
 		}
 
-		err = baseapp.ValidateVoteExtensions(ctx, h.stakingKeeper, req.Height, ctx.ChainID(), req.LocalLastCommit)
+		err = baseapp.ValidateVoteExtensions(ctx, h.stakingKeeper, req.LocalLastCommit)
 		if err != nil {
 			return nil, err
 		}
@@ -298,17 +314,17 @@ func (h *ProposalHandler) PrepareProposal() sdk.PrepareProposalHandler {
 		}
 
 		proposalTxs = append(proposalTxs, bz)
-		return &abci.ResponsePrepareProposal{Txs: proposalTxs}, nil
+		return &abci.PrepareProposalResponse{Txs: proposalTxs}, nil
 	}
 }
 
 func (h *ProposalHandler) ProcessProposal() sdk.ProcessProposalHandler {
-	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
+	return func(ctx sdk.Context, req *abci.ProcessProposalRequest) (*abci.ProcessProposalResponse, error) {
 		txs := [][]byte{}
 		var voteExtTx VoteExtensionTx
 		for _, tx := range req.Txs {
 			if err := json.Unmarshal(tx, &voteExtTx); err == nil {
-				err := baseapp.ValidateVoteExtensions(ctx, h.stakingKeeper, req.Height, ctx.ChainID(), voteExtTx.ExtendedCommitInfo)
+				err := baseapp.ValidateVoteExtensions(ctx, h.stakingKeeper, voteExtTx.ExtendedCommitInfo)
 				if err != nil {
 					return nil, err
 				}
@@ -319,11 +335,11 @@ func (h *ProposalHandler) ProcessProposal() sdk.ProcessProposalHandler {
 				}
 
 				if err := ConfirmVotedData(voteExtTx.VotedData, votedData); err != nil {
-					return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+					return &abci.ProcessProposalResponse{Status: abci.PROCESS_PROPOSAL_STATUS_REJECT}, nil
 				}
 
 				if err := ConfirmFaultValidators(voteExtTx.FaultValidators, faultValidators); err != nil {
-					return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+					return &abci.ProcessProposalResponse{Status: abci.PROCESS_PROPOSAL_STATUS_REJECT}, nil
 				}
 
 				// Create and append metadata for each successfully voted blob
@@ -351,18 +367,16 @@ func (h *ProposalHandler) ProcessProposal() sdk.ProcessProposalHandler {
 	}
 }
 
-func (h *ProposalHandler) PreBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
+func (h *ProposalHandler) PreBlocker(ctx sdk.Context, req *abci.FinalizeBlockRequest) error {
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
-	paramsChanged := false
+
 	for _, moduleName := range h.ModuleManager.OrderPreBlockers {
 		if module, ok := h.ModuleManager.Modules[moduleName].(appmodule.HasPreBlocker); ok {
-			rsp, err := module.PreBlock(ctx)
+			err := module.PreBlock(ctx)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			if rsp.IsConsensusParamsChanged() {
-				paramsChanged = true
-			}
+
 		}
 	}
 
@@ -387,13 +401,16 @@ func (h *ProposalHandler) PreBlocker(ctx sdk.Context, req *abci.RequestFinalizeB
 			h.keeper.SetFaultCounter(ctx, valAddr, h.keeper.GetFaultCounter(ctx, valAddr)+1)
 		}
 
-		params := h.keeper.GetParams(ctx)
+		params, err := h.keeper.Params.Get(ctx)
+		if err != nil {
+			panic(err)
+		}
 		if ctx.BlockHeight()%int64(params.SlashEpoch) == 0 {
 			h.keeper.HandleSlashEpoch(ctx)
 		}
 	}
 
-	return &sdk.ResponsePreBlock{ConsensusParamsChanged: paramsChanged}, nil
+	return nil
 }
 
 type DataVote struct {
@@ -566,7 +583,10 @@ func (h *ProposalHandler) GetVotedDataAndFaultValidators(ctx sdk.Context, commit
 		}
 	}
 
-	params := h.keeper.GetParams(ctx)
+	params, err := h.keeper.Params.Get(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 	faultValidators := map[string]sdk.ValAddress{}
 	dataVotesMap := h.GetDataVotesMapByHash(commitInfo, valPowerMap, valConsAddrMap)
 	for dataHash, dataVote := range dataVotesMap {
@@ -576,7 +596,11 @@ func (h *ProposalHandler) GetVotedDataAndFaultValidators(ctx sdk.Context, commit
 		}
 
 		totalBondedPower := sdk.TokensToConsensusPower(bondedTokens, h.stakingKeeper.PowerReduction(ctx))
-		thresholdPower := params.VoteThreshold.MulInt64(totalBondedPower).RoundInt().Int64()
+		voteThreshold, err := math.LegacyNewDecFromStr(params.VoteThreshold) // TODO: remove with math.Dec
+		if err != nil {
+			return nil, nil, err
+		}
+		thresholdPower := voteThreshold.MulInt64(totalBondedPower).RoundInt().Int64()
 
 		publishedData, aboveThreshold := GetAboveThresholdVotedData(dataVote, thresholdPower, valPowerMap, faultValidators)
 		if !aboveThreshold {

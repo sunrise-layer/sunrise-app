@@ -11,19 +11,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (k Keeper) Gauges(ctx context.Context, req *types.QueryGaugesRequest) (*types.QueryGaugesResponse, error) {
+func (q queryServer) Gauges(ctx context.Context, req *types.QueryGaugesRequest) (*types.QueryGaugesResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
 	var gauges []types.Gauge
 
-	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	store := runtime.KVStoreAdapter(q.k.KVStoreService.OpenKVStore(ctx))
 	gaugeStore := prefix.NewStore(store, types.GaugeKeyPrefixByPreviousEpochId(req.PreviousEpochId))
 
 	pageRes, err := query.Paginate(gaugeStore, req.Pagination, func(key []byte, value []byte) error {
 		var gauge types.Gauge
-		if err := k.cdc.Unmarshal(value, &gauge); err != nil {
+		if err := q.k.cdc.Unmarshal(value, &gauge); err != nil {
 			return err
 		}
 
@@ -38,12 +38,12 @@ func (k Keeper) Gauges(ctx context.Context, req *types.QueryGaugesRequest) (*typ
 	return &types.QueryGaugesResponse{Gauge: gauges, Pagination: pageRes}, nil
 }
 
-func (k Keeper) Gauge(ctx context.Context, req *types.QueryGaugeRequest) (*types.QueryGaugeResponse, error) {
+func (q queryServer) Gauge(ctx context.Context, req *types.QueryGaugeRequest) (*types.QueryGaugeResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
-	val, found := k.GetGauge(
+	val, found := q.k.GetGauge(
 		ctx,
 		req.PreviousEpochId,
 		req.PoolId,

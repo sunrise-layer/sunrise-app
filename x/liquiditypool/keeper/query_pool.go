@@ -22,23 +22,23 @@ func (k Keeper) WrapPoolInfo(ctx context.Context, pool types.Pool) types.PoolInf
 	}
 }
 
-func (k Keeper) Pools(ctx context.Context, req *types.QueryPoolsRequest) (*types.QueryPoolsResponse, error) {
+func (q queryServer) Pools(ctx context.Context, req *types.QueryPoolsRequest) (*types.QueryPoolsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
 	var pools []types.PoolInfo
 
-	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	store := runtime.KVStoreAdapter(q.k.KVStoreService.OpenKVStore(ctx))
 	poolStore := prefix.NewStore(store, types.KeyPrefix(types.PoolKey))
 
 	pageRes, err := query.Paginate(poolStore, req.Pagination, func(key []byte, value []byte) error {
 		var pool types.Pool
-		if err := k.cdc.Unmarshal(value, &pool); err != nil {
+		if err := q.k.cdc.Unmarshal(value, &pool); err != nil {
 			return err
 		}
 
-		pools = append(pools, k.WrapPoolInfo(ctx, pool))
+		pools = append(pools, q.k.WrapPoolInfo(ctx, pool))
 		return nil
 	})
 
@@ -49,15 +49,15 @@ func (k Keeper) Pools(ctx context.Context, req *types.QueryPoolsRequest) (*types
 	return &types.QueryPoolsResponse{Pools: pools, Pagination: pageRes}, nil
 }
 
-func (k Keeper) Pool(ctx context.Context, req *types.QueryPoolRequest) (*types.QueryPoolResponse, error) {
+func (q queryServer) Pool(ctx context.Context, req *types.QueryPoolRequest) (*types.QueryPoolResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
-	pool, found := k.GetPool(ctx, req.Id)
+	pool, found := q.k.GetPool(ctx, req.Id)
 	if !found {
 		return nil, sdkerrors.ErrKeyNotFound
 	}
 
-	return &types.QueryPoolResponse{Pool: k.WrapPoolInfo(ctx, pool)}, nil
+	return &types.QueryPoolResponse{Pool: q.k.WrapPoolInfo(ctx, pool)}, nil
 }

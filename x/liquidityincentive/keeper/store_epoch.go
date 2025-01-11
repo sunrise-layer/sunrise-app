@@ -12,7 +12,7 @@ import (
 
 // GetEpochCount get the total number of epoch
 func (k Keeper) GetEpochCount(ctx context.Context) uint64 {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, []byte{})
 	byteKey := types.KeyPrefix(types.EpochCountKey)
 	bz := store.Get(byteKey)
@@ -28,7 +28,7 @@ func (k Keeper) GetEpochCount(ctx context.Context) uint64 {
 
 // SetEpochCount set the total number of epoch
 func (k Keeper) SetEpochCount(ctx context.Context, count uint64) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, []byte{})
 	byteKey := types.KeyPrefix(types.EpochCountKey)
 	bz := make([]byte, 8)
@@ -44,7 +44,7 @@ func (k Keeper) AppendEpoch(ctx context.Context, epoch types.Epoch) uint64 {
 	// Set the ID of the appended value
 	epoch.Id = count
 
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.EpochKey))
 	appendedValue := k.cdc.MustMarshal(&epoch)
 	store.Set(GetEpochIDBytes(epoch.Id), appendedValue)
@@ -57,7 +57,7 @@ func (k Keeper) AppendEpoch(ctx context.Context, epoch types.Epoch) uint64 {
 
 // SetEpoch set a specific epoch in the store
 func (k Keeper) SetEpoch(ctx context.Context, epoch types.Epoch) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.EpochKey))
 	b := k.cdc.MustMarshal(&epoch)
 	store.Set(GetEpochIDBytes(epoch.Id), b)
@@ -65,7 +65,7 @@ func (k Keeper) SetEpoch(ctx context.Context, epoch types.Epoch) {
 
 // GetEpoch returns a epoch from its id
 func (k Keeper) GetEpoch(ctx context.Context, id uint64) (val types.Epoch, found bool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.EpochKey))
 	b := store.Get(GetEpochIDBytes(id))
 	if b == nil {
@@ -77,13 +77,13 @@ func (k Keeper) GetEpoch(ctx context.Context, id uint64) (val types.Epoch, found
 
 // RemoveEpoch removes a epoch from the store
 func (k Keeper) RemoveEpoch(ctx context.Context, id uint64) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.EpochKey))
 	store.Delete(GetEpochIDBytes(id))
 }
 
 func (k Keeper) GetLastEpoch(ctx context.Context) (epoch types.Epoch, found bool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.EpochKey))
 	iterator := storetypes.KVStoreReversePrefixIterator(store, []byte{})
 
@@ -99,7 +99,7 @@ func (k Keeper) GetLastEpoch(ctx context.Context) (epoch types.Epoch, found bool
 
 // GetAllEpoch returns all epoch
 func (k Keeper) GetAllEpoch(ctx context.Context) (list []types.Epoch) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.EpochKey))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 

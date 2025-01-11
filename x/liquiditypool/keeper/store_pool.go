@@ -12,7 +12,7 @@ import (
 
 // GetPoolCount get the total number of pool
 func (k Keeper) GetPoolCount(ctx context.Context) uint64 {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, []byte{})
 	byteKey := types.KeyPrefix(types.PoolCountKey)
 	bz := store.Get(byteKey)
@@ -28,7 +28,7 @@ func (k Keeper) GetPoolCount(ctx context.Context) uint64 {
 
 // SetPoolCount set the total number of pool
 func (k Keeper) SetPoolCount(ctx context.Context, count uint64) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, []byte{})
 	byteKey := types.KeyPrefix(types.PoolCountKey)
 	bz := make([]byte, 8)
@@ -53,7 +53,7 @@ func (k Keeper) AppendPool(ctx context.Context, pool types.Pool) uint64 {
 
 // SetPool set a specific pool in the store
 func (k Keeper) SetPool(ctx context.Context, pool types.Pool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PoolKey))
 	b := k.cdc.MustMarshal(&pool)
 	store.Set(GetPoolIDBytes(pool.Id), b)
@@ -61,7 +61,7 @@ func (k Keeper) SetPool(ctx context.Context, pool types.Pool) {
 
 // GetPool returns a pool from its id
 func (k Keeper) GetPool(ctx context.Context, id uint64) (val types.Pool, found bool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PoolKey))
 	b := store.Get(GetPoolIDBytes(id))
 	if b == nil {
@@ -73,14 +73,14 @@ func (k Keeper) GetPool(ctx context.Context, id uint64) (val types.Pool, found b
 
 // RemovePool removes a pool from the store
 func (k Keeper) RemovePool(ctx context.Context, id uint64) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PoolKey))
 	store.Delete(GetPoolIDBytes(id))
 }
 
 // GetAllPools returns all pool
 func (k Keeper) GetAllPools(ctx context.Context) (list []types.Pool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.PoolKey))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 

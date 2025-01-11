@@ -11,7 +11,7 @@ import (
 
 // SetIncomingInFlightPacket set a specific incomingPacket in the store from its index
 func (k Keeper) SetIncomingInFlightPacket(ctx context.Context, incomingPacket types.IncomingInFlightPacket) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.IncomingInFlightPacketKeyPrefix))
 	b := k.cdc.MustMarshal(&incomingPacket)
 	store.Set(types.IncomingInFlightPacketKey(
@@ -26,7 +26,7 @@ func (k Keeper) GetIncomingInFlightPacket(
 	srcChannelId string,
 	sequence uint64,
 ) (val types.IncomingInFlightPacket, found bool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.IncomingInFlightPacketKeyPrefix))
 
 	b := store.Get(types.IncomingInFlightPacketKey(
@@ -51,7 +51,7 @@ func (k Keeper) RemoveIncomingInFlightPacket(
 	srcChannelId string,
 	sequence uint64,
 ) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.IncomingInFlightPacketKeyPrefix))
 	store.Delete(types.IncomingInFlightPacketKey(
 		types.NewPacketIndex(
@@ -64,7 +64,7 @@ func (k Keeper) RemoveIncomingInFlightPacket(
 
 // GetIncomingInFlightPackets returns all incomingPacket
 func (k Keeper) GetIncomingInFlightPackets(ctx context.Context) (list []types.IncomingInFlightPacket) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.IncomingInFlightPacketKeyPrefix))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 

@@ -10,7 +10,10 @@ import (
 )
 
 func (k Keeper) Convert(ctx context.Context, amount math.Int, address sdk.AccAddress) error {
-	params := k.GetParams(ctx)
+	params, err := k.Params.Get(ctx)
+	if err != nil {
+		return err
+	}
 
 	bondToken := sdk.NewCoin(params.BondDenom, amount)
 	if err := bondToken.Validate(); err != nil {
@@ -25,7 +28,7 @@ func (k Keeper) Convert(ctx context.Context, amount math.Int, address sdk.AccAdd
 		return err
 	}
 
-	if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, sdk.NewCoins(bondToken)); err != nil {
+	if err := k.bankKeeper.BurnCoins(ctx, k.accountKeeper.GetModuleAddress(types.ModuleName), sdk.NewCoins(bondToken)); err != nil {
 		return err
 	}
 

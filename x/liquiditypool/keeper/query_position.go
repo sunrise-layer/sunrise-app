@@ -31,23 +31,23 @@ func (k Keeper) WrapPositionInfo(ctx context.Context, position types.Position) t
 	}
 }
 
-func (k Keeper) Positions(ctx context.Context, req *types.QueryPositionsRequest) (*types.QueryPositionsResponse, error) {
+func (q queryServer) Positions(ctx context.Context, req *types.QueryPositionsRequest) (*types.QueryPositionsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
 	var positions []types.PositionInfo
 
-	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	store := runtime.KVStoreAdapter(q.k.KVStoreService.OpenKVStore(ctx))
 	positionStore := prefix.NewStore(store, types.KeyPrefix(types.PositionKey))
 
 	pageRes, err := query.Paginate(positionStore, req.Pagination, func(key []byte, value []byte) error {
 		var position types.Position
-		if err := k.cdc.Unmarshal(value, &position); err != nil {
+		if err := q.k.cdc.Unmarshal(value, &position); err != nil {
 			return err
 		}
 
-		positions = append(positions, k.WrapPositionInfo(ctx, position))
+		positions = append(positions, q.k.WrapPositionInfo(ctx, position))
 		return nil
 	})
 
@@ -58,53 +58,53 @@ func (k Keeper) Positions(ctx context.Context, req *types.QueryPositionsRequest)
 	return &types.QueryPositionsResponse{Positions: positions, Pagination: pageRes}, nil
 }
 
-func (k Keeper) Position(ctx context.Context, req *types.QueryPositionRequest) (*types.QueryPositionResponse, error) {
+func (q queryServer) Position(ctx context.Context, req *types.QueryPositionRequest) (*types.QueryPositionResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
-	position, found := k.GetPosition(ctx, req.Id)
+	position, found := q.k.GetPosition(ctx, req.Id)
 	if !found {
 		return nil, sdkerrors.ErrKeyNotFound
 	}
 
-	return &types.QueryPositionResponse{Position: k.WrapPositionInfo(ctx, position)}, nil
+	return &types.QueryPositionResponse{Position: q.k.WrapPositionInfo(ctx, position)}, nil
 }
 
-func (k Keeper) PoolPositions(ctx context.Context, req *types.QueryPoolPositionsRequest) (*types.QueryPoolPositionsResponse, error) {
+func (q queryServer) PoolPositions(ctx context.Context, req *types.QueryPoolPositionsRequest) (*types.QueryPoolPositionsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
 	positionInfos := []types.PositionInfo{}
-	positions := k.GetPositionsByPool(ctx, req.PoolId)
+	positions := q.k.GetPositionsByPool(ctx, req.PoolId)
 	for _, position := range positions {
-		positionInfos = append(positionInfos, k.WrapPositionInfo(ctx, position))
+		positionInfos = append(positionInfos, q.k.WrapPositionInfo(ctx, position))
 	}
 
 	return &types.QueryPoolPositionsResponse{Positions: positionInfos}, nil
 }
 
-func (k Keeper) AddressPositions(ctx context.Context, req *types.QueryAddressPositionsRequest) (*types.QueryAddressPositionsResponse, error) {
+func (q queryServer) AddressPositions(ctx context.Context, req *types.QueryAddressPositionsRequest) (*types.QueryAddressPositionsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
 	positionInfos := []types.PositionInfo{}
-	positions := k.GetPositionsByAddress(ctx, req.Address)
+	positions := q.k.GetPositionsByAddress(ctx, req.Address)
 	for _, position := range positions {
-		positionInfos = append(positionInfos, k.WrapPositionInfo(ctx, position))
+		positionInfos = append(positionInfos, q.k.WrapPositionInfo(ctx, position))
 	}
 
 	return &types.QueryAddressPositionsResponse{Positions: positionInfos}, nil
 }
 
-func (k Keeper) PositionFees(ctx context.Context, req *types.QueryPositionFeesRequest) (*types.QueryPositionFeesResponse, error) {
+func (q queryServer) PositionFees(ctx context.Context, req *types.QueryPositionFeesRequest) (*types.QueryPositionFeesResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
-	collectedFees, err := k.GetClaimableFees(sdk.UnwrapSDKContext(ctx), req.Id)
+	collectedFees, err := q.k.GetClaimableFees(sdk.UnwrapSDKContext(ctx), req.Id)
 	if err != nil {
 		return nil, err
 	}

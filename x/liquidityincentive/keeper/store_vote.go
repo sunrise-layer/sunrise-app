@@ -11,7 +11,7 @@ import (
 
 // SetVote set a specific vote in the store from its index
 func (k Keeper) SetVote(ctx context.Context, vote types.Vote) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.VoteKeyPrefix))
 	b := k.cdc.MustMarshal(&vote)
 	store.Set([]byte(vote.Sender), b)
@@ -20,7 +20,7 @@ func (k Keeper) SetVote(ctx context.Context, vote types.Vote) {
 
 // GetVote returns a vote from its index
 func (k Keeper) GetVote(ctx context.Context, sender string) (val types.Vote, found bool) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.VoteKeyPrefix))
 
 	b := store.Get([]byte(sender))
@@ -34,14 +34,14 @@ func (k Keeper) GetVote(ctx context.Context, sender string) (val types.Vote, fou
 
 // RemoveVote removes a vote from the store
 func (k Keeper) RemoveVote(ctx context.Context, sender string) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.VoteKeyPrefix))
 	store.Delete([]byte(sender))
 }
 
 // GetAllVotes returns all vote
 func (k Keeper) GetAllVotes(ctx context.Context) (list []types.Vote) {
-	storeAdapter := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	storeAdapter := runtime.KVStoreAdapter(k.KVStoreService.OpenKVStore(ctx))
 	store := prefix.NewStore(storeAdapter, types.KeyPrefix(types.VoteKeyPrefix))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 

@@ -4,15 +4,9 @@ import (
 	"fmt"
 )
 
-// DefaultIndex is the default global index
-const DefaultIndex uint64 = 1
-
 // DefaultGenesis returns the default genesis state
 func DefaultGenesis() *GenesisState {
 	return &GenesisState{
-		IncomingInFlightPackets: []IncomingInFlightPacket{},
-		OutgoingInFlightPackets: []OutgoingInFlightPacket{},
-		// this line is used by starport scaffolding # genesis/types/default
 		Params: DefaultParams(),
 	}
 }
@@ -40,7 +34,6 @@ func (gs GenesisState) Validate() error {
 		}
 		outgoingInFlightPacketIndexMap[index] = struct{}{}
 	}
-	// this line is used by starport scaffolding # genesis/types/validate
 
 	return gs.Params.Validate()
 }

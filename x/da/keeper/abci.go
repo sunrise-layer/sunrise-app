@@ -10,10 +10,12 @@ import (
 
 func (k Keeper) EndBlocker(ctx context.Context) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	params := k.GetParams(ctx)
+	// TODO: error handling
+	params, _ := k.Params.Get(ctx)
+	replicationFactor := math.LegacyMustNewDecFromStr(params.ReplicationFactor) // TODO: remove with Dec
 	challengePeriodData, err := k.GetUnverifiedDataBeforeTime(sdkCtx, uint64(sdkCtx.BlockTime().Add(-params.ChallengePeriod).Unix()))
 	if err != nil {
-		k.Logger().Error(err.Error())
+		k.Logger.Error(err.Error())
 		return
 	}
 
@@ -28,14 +30,14 @@ func (k Keeper) EndBlocker(ctx context.Context) {
 		publisher := sdk.MustAccAddressFromBech32(data.Publisher)
 		err = k.BankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, publisher, data.Collateral)
 		if err != nil {
-			k.Logger().Error(err.Error())
+			k.Logger.Error(err.Error())
 			return
 		}
 	}
 
 	proofPeriodData, err := k.GetUnverifiedDataBeforeTime(sdkCtx, uint64(sdkCtx.BlockTime().Add(-params.ChallengePeriod-params.ProofPeriod).Unix()))
 	if err != nil {
-		k.Logger().Error(err.Error())
+		k.Logger.Error(err.Error())
 		return
 	}
 
@@ -45,7 +47,7 @@ func (k Keeper) EndBlocker(ctx context.Context) {
 	// powerReduction := k.StakingKeeper.PowerReduction(ctx)
 	iterator, err := k.StakingKeeper.ValidatorsPowerStoreIterator(ctx)
 	if err != nil {
-		k.Logger().Error(err.Error())
+		k.Logger.Error(err.Error())
 		return
 	}
 
@@ -53,7 +55,7 @@ func (k Keeper) EndBlocker(ctx context.Context) {
 	for ; iterator.Valid(); iterator.Next() {
 		validator, err := k.StakingKeeper.Validator(ctx, iterator.Value())
 		if err != nil {
-			k.Logger().Error(err.Error())
+			k.Logger.Error(err.Error())
 			return
 		}
 
@@ -105,7 +107,7 @@ func (k Keeper) EndBlocker(ctx context.Context) {
 			safeShardCount := int64(0)
 			for indice, proofCount := range shardProofCount {
 				// replication_factor_with_parity = replication_factor * data_shard_count / (data_shard_count + parity_shard_count)
-				replicationFactorWithParity := params.ReplicationFactor.
+				replicationFactorWithParity := replicationFactor.
 					MulInt64(int64(len(data.ShardDoubleHashes) - int(data.ParityShardCount))).
 					QuoInt64(int64(len(data.ShardDoubleHashes)))
 
@@ -129,7 +131,7 @@ func (k Keeper) EndBlocker(ctx context.Context) {
 				data.Status = "rejected"
 				err = k.SetPublishedData(ctx, data)
 				if err != nil {
-					k.Logger().Error(err.Error())
+					k.Logger.Error(err.Error())
 					return
 				}
 				// k.DeletePublishedData(sdkCtx, data)
@@ -137,20 +139,20 @@ func (k Keeper) EndBlocker(ctx context.Context) {
 				challenger := sdk.MustAccAddressFromBech32(data.Challenger)
 				err = k.BankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, challenger, data.Collateral.Add(data.Collateral...))
 				if err != nil {
-					k.Logger().Error(err.Error())
+					k.Logger.Error(err.Error())
 					return
 				}
 			} else {
 				data.Status = "verified"
 				err = k.SetPublishedData(ctx, data)
 				if err != nil {
-					k.Logger().Error(err.Error())
+					k.Logger.Error(err.Error())
 					return
 				}
 				publisher := sdk.MustAccAddressFromBech32(data.Publisher)
 				err = k.BankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, publisher, data.Collateral.Add(data.Collateral...))
 				if err != nil {
-					k.Logger().Error(err.Error())
+					k.Logger.Error(err.Error())
 					return
 				}
 			}

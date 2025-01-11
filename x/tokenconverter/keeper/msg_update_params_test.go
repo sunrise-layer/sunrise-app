@@ -3,17 +3,22 @@ package keeper_test
 import (
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"cosmossdk.io/math"
 	"github.com/stretchr/testify/require"
 
+	"github.com/sunriselayer/sunrise/x/tokenconverter/keeper"
 	"github.com/sunriselayer/sunrise/x/tokenconverter/types"
 )
 
 func TestMsgUpdateParams(t *testing.T) {
-	k, ms, ctx := setupMsgServer(t)
+	f := initFixture(t)
+	ms := keeper.NewMsgServerImpl(f.keeper)
+
 	params := types.DefaultParams()
-	require.NoError(t, k.SetParams(ctx, params))
-	wctx := sdk.UnwrapSDKContext(ctx)
+	require.NoError(t, f.keeper.Params.Set(f.ctx, params))
+
+	authorityStr, err := f.addressCodec.BytesToString(f.keeper.GetAuthority())
+	require.NoError(t, err)
 
 	// default params
 	testCases := []struct {
@@ -34,15 +39,19 @@ func TestMsgUpdateParams(t *testing.T) {
 		{
 			name: "send enabled param",
 			input: &types.MsgUpdateParams{
-				Authority: k.GetAuthority(),
-				Params:    types.Params{},
+				Authority: authorityStr,
+				Params: types.Params{
+					BondDenom:         "stake",
+					FeeDenom:          "fee",
+					SelfDelegationCap: math.NewInt(1),
+				},
 			},
 			expErr: false,
 		},
 		{
 			name: "all good",
 			input: &types.MsgUpdateParams{
-				Authority: k.GetAuthority(),
+				Authority: authorityStr,
 				Params:    params,
 			},
 			expErr: false,
@@ -51,7 +60,7 @@ func TestMsgUpdateParams(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := ms.UpdateParams(wctx, tc.input)
+			_, err := ms.UpdateParams(f.ctx, tc.input)
 
 			if tc.expErr {
 				require.Error(t, err)

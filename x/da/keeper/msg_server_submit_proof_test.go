@@ -9,6 +9,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+	"github.com/sunriselayer/sunrise/testutil/sample"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	native_mimc "github.com/consensys/gnark-crypto/ecc/bn254/fr/mimc"
@@ -22,7 +23,7 @@ import (
 func TestMsgSubmitProof(t *testing.T) {
 	k, ms, ctx := setupMsgServer(t)
 	params := types.DefaultParams()
-	require.NoError(t, k.SetParams(ctx, params))
+	require.NoError(t, k.Params.Set(ctx, params))
 	wctx := sdk.UnwrapSDKContext(ctx)
 
 	preImage1 := big.NewInt(111)
@@ -81,7 +82,7 @@ func TestMsgSubmitProof(t *testing.T) {
 		{
 			name: "invalid data hash",
 			input: &types.MsgSubmitProof{
-				Sender:      "sender",
+				Sender:      sample.AccAddress(),
 				MetadataUri: "ipfs://metadata1",
 				Indices:     []int64{},
 				Proofs:      [][]byte{},
@@ -92,7 +93,7 @@ func TestMsgSubmitProof(t *testing.T) {
 		{
 			name: "valid proof",
 			input: &types.MsgSubmitProof{
-				Sender:      "sender",
+				Sender:      sample.AccAddress(),
 				MetadataUri: "ipfs://metadata1",
 				Indices:     []int64{0},
 				Proofs:      [][]byte{proofBytes},
@@ -103,7 +104,7 @@ func TestMsgSubmitProof(t *testing.T) {
 		{
 			name: "invalid proof",
 			input: &types.MsgSubmitProof{
-				Sender:      "sender",
+				Sender:      sample.AccAddress(),
 				MetadataUri: "ipfs://metadata1",
 				Indices:     []int64{0},
 				Proofs:      [][]byte{{0x0}},

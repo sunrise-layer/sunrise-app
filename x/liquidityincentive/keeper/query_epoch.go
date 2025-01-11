@@ -12,19 +12,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (k Keeper) Epochs(ctx context.Context, req *types.QueryEpochsRequest) (*types.QueryEpochsResponse, error) {
+func (q queryServer) Epochs(ctx context.Context, req *types.QueryEpochsRequest) (*types.QueryEpochsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
 	var epochs []types.Epoch
 
-	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	store := runtime.KVStoreAdapter(q.k.KVStoreService.OpenKVStore(ctx))
 	epochStore := prefix.NewStore(store, types.KeyPrefix(types.EpochKey))
 
 	pageRes, err := query.Paginate(epochStore, req.Pagination, func(key []byte, value []byte) error {
 		var epoch types.Epoch
-		if err := k.cdc.Unmarshal(value, &epoch); err != nil {
+		if err := q.k.cdc.Unmarshal(value, &epoch); err != nil {
 			return err
 		}
 
@@ -39,12 +39,12 @@ func (k Keeper) Epochs(ctx context.Context, req *types.QueryEpochsRequest) (*typ
 	return &types.QueryEpochsResponse{Epochs: epochs, Pagination: pageRes}, nil
 }
 
-func (k Keeper) Epoch(ctx context.Context, req *types.QueryEpochRequest) (*types.QueryEpochResponse, error) {
+func (q queryServer) Epoch(ctx context.Context, req *types.QueryEpochRequest) (*types.QueryEpochResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
-	epoch, found := k.GetEpoch(ctx, req.Id)
+	epoch, found := q.k.GetEpoch(ctx, req.Id)
 	if !found {
 		return nil, sdkerrors.ErrKeyNotFound
 	}

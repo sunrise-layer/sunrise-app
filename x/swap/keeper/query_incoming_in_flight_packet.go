@@ -11,19 +11,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (k Keeper) IncomingInFlightPackets(ctx context.Context, req *types.QueryIncomingInFlightPacketsRequest) (*types.QueryIncomingInFlightPacketsResponse, error) {
+func (q queryServer) IncomingInFlightPackets(ctx context.Context, req *types.QueryIncomingInFlightPacketsRequest) (*types.QueryIncomingInFlightPacketsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
 	var incomingPackets []types.IncomingInFlightPacket
 
-	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	store := runtime.KVStoreAdapter(q.k.KVStoreService.OpenKVStore(ctx))
 	incomingPacketStore := prefix.NewStore(store, types.KeyPrefix(types.IncomingInFlightPacketKeyPrefix))
 
 	pageRes, err := query.Paginate(incomingPacketStore, req.Pagination, func(key []byte, value []byte) error {
 		var incomingPacket types.IncomingInFlightPacket
-		if err := k.cdc.Unmarshal(value, &incomingPacket); err != nil {
+		if err := q.k.cdc.Unmarshal(value, &incomingPacket); err != nil {
 			return err
 		}
 
@@ -38,12 +38,12 @@ func (k Keeper) IncomingInFlightPackets(ctx context.Context, req *types.QueryInc
 	return &types.QueryIncomingInFlightPacketsResponse{Packets: incomingPackets, Pagination: pageRes}, nil
 }
 
-func (k Keeper) IncomingInFlightPacket(ctx context.Context, req *types.QueryIncomingInFlightPacketRequest) (*types.QueryIncomingInFlightPacketResponse, error) {
+func (q queryServer) IncomingInFlightPacket(ctx context.Context, req *types.QueryIncomingInFlightPacketRequest) (*types.QueryIncomingInFlightPacketResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
 
-	val, found := k.GetIncomingInFlightPacket(
+	val, found := q.k.GetIncomingInFlightPacket(
 		ctx,
 		req.SrcPortId, req.SrcChannelId, req.Sequence,
 	)
